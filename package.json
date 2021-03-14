@@ -1,0 +1,41 @@
+{
+    "name": "circledata-backend",
+    "version": "1.0.0",
+    "description": "",
+    "main": "src/main.mjs",
+    "scripts": {
+        "start": "nodemon",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Kage0x3B/circledata-backend.git"
+    },
+    "author": "Kage0x3B",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/Kage0x3B/circledata-backend/issues"
+    },
+    "homepage": "https://github.com/Kage0x3B/circledata-backend#readme",
+    "devDependencies": {
+        "eslint": "^7.21.0",
+        "eslint-config-prettier": "^8.1.0",
+        "eslint-plugin-node": "^11.1.0",
+        "eslint-plugin-prettier": "^3.3.1",
+        "nodemon": "^2.0.7",
+        "prettier": "^2.2.1"
+    },
+    "dependencies": {
+        "bcryptjs": "^2.4.3",
+        "body-parser": "^1.19.0",
+        "dotenv": "^8.2.0",
+        "express": "^4.17.1",
+        "helmet": "^4.4.1",
+        "jsonwebtoken": "^8.5.1",
+        "mysql2": "^2.2.5",
+        "node-cron": "^3.0.0",
+        "passport": "^0.4.1",
+        "passport-jwt": "^4.0.0",
+        "uuid": "^8.3.2"
+    }
+}
