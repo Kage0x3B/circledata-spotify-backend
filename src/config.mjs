@@ -12,6 +12,11 @@ export default {
         longExpMonths: parseInt(process.env.JWT_LONG_EXP_MONTHS, 10),
         longExpHours: parseInt(process.env.JWT_LONG_EXP_HOURS, 10)
     },
+    spotify: {
+        clientId: process.env.SPOTIFY_CLIENT_ID,
+        clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+        callback: process.env.SPOTIFY_CALLBACK
+    },
     saltRounds: parseInt(process.env.SALT_ROUNDS, 10),
     database: {
         host: process.env.DB_HOST,

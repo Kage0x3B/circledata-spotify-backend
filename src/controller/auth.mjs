@@ -133,6 +133,10 @@ router.post("/refresh", async (req, res, next) => {
     });
 });
 
+router.get("/retrieveAuthorizationUrl", (req, res) => {
+
+});
+
 router.post("/logout", async (req, res, next) => {
     if (req.header("authorization")) {
         const oldToken = req.headers.authorization.split(" ")[1];
