@@ -6,7 +6,9 @@ import jwt from "jsonwebtoken";
 import config from "../config.mjs";
 import db from "../service/db.mjs";
 import { authLogger } from "../service/logger.mjs";
-import { BadRequestError, UnauthorizedError } from "../util/RestError.mjs";
+import { BadRequestError, ForbiddenError, UnauthorizedError } from "../util/RestError.mjs";
+import spotify, { getSpotifyApi, SPOTIFY_STATE } from "../service/spotify.mjs";
+import user from "../model/user.mjs";
 
 const router = express.Router();
 
@@ -26,15 +28,18 @@ async function generateRefreshToken(userId) {
 
 async function sendJwtToken(req, res, next) {
     try {
-        const refreshToken = await generateRefreshToken(req.userData.id);
+        const refreshToken = await generateRefreshToken(req.user.id);
 
-        authLogger.info(`User ${req.userData.id} authenticated, generating JWT and refresh token`, {}, req.userData.id);
+        authLogger.info(`User ${req.user.id} authenticated, generating JWT and refresh token`, {}, req.user.id);
 
         const currentData = new Date();
         const jwtToken = jwt.sign(
             {
-                id: req.userData.id,
-                username: req.userData.username,
+                id: req.user.id,
+                spotifyUserId: req.user.spotifyUserId,
+                displayName: req.user.displayName,
+                profilePictureUrl: req.user.profilePictureUrl,
+                hasSpotifyPremium: req.user.hasSpotifyPremium,
                 longExpire: currentData.setMonth(currentData.getMonth() + config.jwt.longExpMonths)
             },
             config.jwt.secret,
@@ -52,36 +57,34 @@ async function sendJwtToken(req, res, next) {
     }
 }
 
-async function processUserData(req, res, next) {
-    if (!req.userData || !req.userData.length || !req.userData[0]) {
-        return next(authError);
-    }
-
-    // eslint-disable-next-line prefer-destructuring
-    req.userData = req.userData[0];
-
-    next();
-}
-
-async function validatePassword(req, res, next) {
-    if (bcrypt.compareSync(req.body.password, req.userData.password)) {
-        next();
-    } else {
-        next(authError);
-    }
-}
-
 router.post(
-    "/login",
+    "/authorize",
     async (req, res, next) => {
-        [req.userData] = await db.query("SELECT * FROM user WHERE username = ? AND active = TRUE", [
-            req.body.username
-        ]);
+        if (!req.body.code || !req.body.state) {
+            return next(new BadRequestError("No spotify authorization code or state"));
+        }
+
+        if (req.body.state !== SPOTIFY_STATE) {
+            return next(new BadRequestError("Invalid state"));
+        }
+
+        const spotifyApi = getSpotifyApi();
+
+        const authData = (await spotifyApi.authorizationCodeGrant(req.body.code)).body;
+
+        spotifyApi.setAccessToken(authData.access_token);
+        spotifyApi.setRefreshToken(authData.refresh_token);
+
+        const userData = (await spotifyApi.getMe()).body;
+
+        userData.spotifyAccessToken = authData.access_token;
+        userData.spotifyRefreshToken = authData.refresh_token;
+        userData.spotifyTokenExpiration = authData.expires_in;
+
+        req.user = await user.loginWithSpotify(userData.id, userData);
 
         next();
     },
-    processUserData,
-    validatePassword,
     sendJwtToken
 );
 
@@ -92,8 +95,6 @@ router.post("/refresh", async (req, res, next) => {
 
     const oldToken = req.headers.authorization.split(" ")[1];
     const oldRefreshToken = req.body.refreshToken;
-
-    console.log("refresh route", req.headers.authorization, req.body.refreshToken);
 
     jwt.verify(oldToken, config.jwt.secret, { ignoreExpiration: true }, async (err, decoded) => {
         if (err) {
@@ -117,7 +118,10 @@ router.post("/refresh", async (req, res, next) => {
         const jwtToken = jwt.sign(
             {
                 id: decoded.id,
-                username: decoded.username,
+                spotifyUserId: decoded.spotifyUserId,
+                displayName: decoded.displayName,
+                profilePictureUrl: decoded.profilePictureUrl,
+                hasSpotifyPremium: decoded.hasSpotifyPremium,
                 longExpire: decoded.longExpire
             },
             config.jwt.secret,
@@ -131,10 +135,6 @@ router.post("/refresh", async (req, res, next) => {
             refreshToken: newRefreshToken
         });
     });
-});
-
-router.get("/retrieveAuthorizationUrl", (req, res) => {
-
 });
 
 router.post("/logout", async (req, res, next) => {
@@ -157,6 +157,12 @@ router.post("/logout", async (req, res, next) => {
     } else {
         next(new UnauthorizedError("No auth bearer in header provided"));
     }
+});
+
+router.get("/createSpotifyAuthUrl", (req, res) => {
+    res.json({
+        url: spotify.createAuthorizeURL()
+    });
 });
 
 export default router;

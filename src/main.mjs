@@ -9,6 +9,7 @@ import "./util/passport.mjs";
 
 import RestError from "./util/RestError.mjs";
 import auth from "./controller/auth.mjs";
+import dashboard from './controller/dashboard.mjs'
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(passport.initialize());
 
 app.use("/auth", auth);
+app.use("/dashboard", dashboard);
 
 app.all("*", (err, req, res, next) => {
     throw new RestError("Request handler not found", 404);

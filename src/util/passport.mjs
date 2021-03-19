@@ -1,7 +1,7 @@
 import passport from "passport";
 import passportJWT from "passport-jwt";
-import db from "../service/db.mjs";
 import config from "../config.mjs";
+import user from '../model/user.mjs'
 
 const JWTStrategy = passportJWT.Strategy;
 const ExtractJWT = passportJWT.ExtractJwt;
@@ -21,12 +21,9 @@ passport.use(
                     return callback("Token Expired", false);
                 }
 
-                const [userResult] = await db.query(
-                    "SELECT id, username, role, active, created FROM user WHERE id = ?",
-                    [jwtPayload.id]
-                );
+                const userData = await user.findById(jwtPayload.id);
 
-                return callback(null, userResult[0] || false);
+                return callback(null, userData || false);
             } catch (err) {
                 callback(err, false);
             }
