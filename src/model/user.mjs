@@ -62,6 +62,12 @@ class User {
     }
 }
 
+async function getAll() {
+    const [result] = await db.query("SELECT * FROM user");
+
+    return result.map((d) => new User(d));
+}
+
 async function findById(id) {
     const [result] = await db.query("SELECT * FROM user WHERE id = ?", [id]);
 
@@ -98,7 +104,11 @@ async function createForSpotifyId(spotifyUserId, userData) {
 
     await user.create();
 
-    await user.updateAuthorization(userData.spotifyRefreshToken, userData.spotifyAccessToken, userData.spotifyTokenExpiration);
+    await user.updateAuthorization(
+        userData.spotifyRefreshToken,
+        userData.spotifyAccessToken,
+        userData.spotifyTokenExpiration
+    );
 
     return user;
 }
@@ -111,13 +121,18 @@ async function loginWithSpotify(spotifyId, userData) {
 
         user = findBySpotifyId(spotifyId);
     } else {
-        await user.updateAuthorization(userData.spotifyRefreshToken, userData.spotifyAccessToken, userData.spotifyTokenExpiration);
+        await user.updateAuthorization(
+            userData.spotifyRefreshToken,
+            userData.spotifyAccessToken,
+            userData.spotifyTokenExpiration
+        );
     }
 
     return user;
 }
 
 export default {
+    getAll,
     findById,
     findBySpotifyId,
     loginWithSpotify

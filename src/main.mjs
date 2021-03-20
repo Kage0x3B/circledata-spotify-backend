@@ -9,7 +9,10 @@ import "./util/passport.mjs";
 
 import RestError from "./util/RestError.mjs";
 import auth from "./controller/auth.mjs";
-import dashboard from './controller/dashboard.mjs'
+import dashboard from "./controller/dashboard.mjs";
+import { scheduleCronJobs } from "./cron/cronJobs.mjs";
+
+scheduleCronJobs();
 
 const app = express();
 
