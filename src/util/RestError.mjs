@@ -45,4 +45,10 @@ class NotFoundError extends RestError {
     }
 }
 
-export { BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError };
+class RateLimitError extends RestError {
+    constructor(message = "Rate limit", cause = null) {
+        super(message, 429, cause);
+    }
+}
+
+export { BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, RateLimitError };

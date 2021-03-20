@@ -1,5 +1,6 @@
 import config from "../config.mjs";
 import SpotifyWebApi from "spotify-web-api-node";
+import RestError, { RateLimitError } from "../util/RestError.mjs";
 
 const SCOPES = [
     "user-read-private",
@@ -15,6 +16,8 @@ const SCOPES = [
     "user-follow-read"
 ];
 export const SPOTIFY_STATE = "CDVSS";
+
+let rateLimitingRequestBlock = false;
 
 export function getSpotifyApi() {
     return new SpotifyWebApi({
@@ -39,18 +42,29 @@ export function getSpotifyApiForUser(user) {
 }
 
 export async function doSpotifyRequest(spotifyApi, spotifyApiFunction, options) {
-    if(spotifyApi.internalUser && !spotifyApi.internalUser.hasValidAccessToken()) {
+    if (rateLimitingRequestBlock && rateLimitingRequestBlock > Date.now()) {
+        throw new RateLimitError();
+    }
+
+    if (spotifyApi.internalUser && !spotifyApi.internalUser.hasValidAccessToken()) {
         console.log("Noticed expired access token early");
         await refreshAccessToken(spotifyApi);
     }
 
     try {
         return (await spotifyApiFunction.call(spotifyApi, options)).body;
-    } catch(err) {
-        if(err.statusCode === 401) {
+    } catch (err) {
+        if (err.statusCode === 401) {
             await refreshAccessToken(spotifyApi);
 
             return (await spotifyApiFunction.call(spotifyApi, options)).body;
+        } else if (err.statusCode === 429) {
+            const retryAfterSeconds = err.headers["retry-after"];
+            rateLimitingRequestBlock = Date.now() + retryAfterSeconds * 1000;
+
+            console.warn("Rate limit, retry after", retryAfterSeconds, "seconds");
+
+            throw new RateLimitError();
         } else {
             throw err;
         }
@@ -65,7 +79,7 @@ async function refreshAccessToken(spotifyApi) {
     const accessToken = data.body.access_token;
     const tokenExpiration = data.body.expires_in;
 
-    if(spotifyApi.internalUser) {
+    if (spotifyApi.internalUser) {
         await spotifyApi.internalUser.updateAccessToken(accessToken, tokenExpiration);
     }
 
