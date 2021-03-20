@@ -19,7 +19,7 @@ async function generateRefreshToken(userId) {
     const refreshToken = generateUuid();
 
     await db.query(
-        "INSERT INTO refresh_tokens (userId, token) VALUES (?, UUID_TO_BIN(?)) AS new ON DUPLICATE KEY UPDATE token = new.token",
+        "INSERT INTO refreshTokens (userId, token) VALUES (?, UUID_TO_BIN(?)) AS new ON DUPLICATE KEY UPDATE token = new.token",
         [userId, refreshToken]
     );
 
@@ -105,7 +105,7 @@ router.post("/refresh", async (req, res, next) => {
             return next(new UnauthorizedError("Lifecycle of refresh period is over"));
         }
 
-        const [result] = await db.query("SELECT BIN_TO_UUID(token) AS token FROM refresh_tokens WHERE userId = ?", [
+        const [result] = await db.query("SELECT BIN_TO_UUID(token) AS token FROM refreshTokens WHERE userId = ?", [
             decoded.id
         ]);
 
@@ -147,7 +147,7 @@ router.post("/logout", async (req, res, next) => {
                     throw err;
                 }
 
-                await db.query("DELETE FROM refresh_tokens WHERE userId = ?", [decoded.id]);
+                await db.query("DELETE FROM refreshTokens WHERE userId = ?", [decoded.id]);
 
                 res.status(200).json({ success: true });
             });
